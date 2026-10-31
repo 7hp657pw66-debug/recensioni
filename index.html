@@ -381,7 +381,7 @@
       stars.forEach(s => s.classList.toggle("active", Number(s.dataset.value) <= value));
     }
 
-    let locked = false;       // evita doppi click dopo la scelta
+    let locked = false;       // si blocca solo quando parte il redirect a Google o dopo l'invio
     let chosenRating = 0;     // valutazione scelta
 
     stars.forEach(star => {
@@ -389,7 +389,8 @@
 
       // Anteprima al passaggio del mouse (desktop)
       star.addEventListener("mouseenter", () => { if (!locked) highlight(value); });
-      starsContainer.addEventListener("mouseleave", () => { if (!locked) highlight(0); });
+      // Quando il mouse esce, torna alla valutazione scelta (o a 0)
+      starsContainer.addEventListener("mouseleave", () => { if (!locked) highlight(chosenRating); });
 
       // Anteprima al tocco (mobile)
       star.addEventListener("touchstart", () => { if (!locked) highlight(value); }, { passive: true });
@@ -397,21 +398,27 @@
       // Click / tap
       star.addEventListener("click", () => {
         if (locked) return;
-        locked = true;
         chosenRating = value;
         highlight(value);
 
-        // Animazione "pop"
+        // Animazione "pop" (la tolgo e la rimetto per poterla rifare)
+        star.classList.remove("pop");
+        void star.offsetWidth;
         star.classList.add("pop");
 
         if (value >= 4) {
-          // 4-5 stelle: breve pausa per vedere l'animazione, poi redirect a Google
+          // 4-5 stelle: blocco e redirect a Google
+          locked = true;
           setTimeout(() => { window.location.href = GOOGLE_REVIEW_URL; }, 450);
         } else {
-          // 1-3 stelle: mostra il modulo di feedback privato
+          // 1-3 stelle: mostra il modulo (se è già aperto resta com'è)
+          // Le stelle restano cliccabili: il cliente può cambiare idea
           setTimeout(() => {
-            document.getElementById("feedback-section").classList.add("show");
-            document.getElementById("message").focus();
+            const fb = document.getElementById("feedback-section");
+            if (!fb.classList.contains("show")) {
+              fb.classList.add("show");
+              document.getElementById("message").focus();
+            }
           }, 450);
         }
       });
@@ -445,6 +452,9 @@
         });
         if (!res.ok) throw new Error("Errore server");
 
+        // Dopo l'invio le stelle non si possono più cambiare
+        locked = true;
+
         // Mostra il ringraziamento
         document.getElementById("rating-section").style.display = "none";
         document.getElementById("feedback-section").classList.remove("show");
@@ -462,3 +472,5 @@
   </script>
 </body>
 </html>
+
+
